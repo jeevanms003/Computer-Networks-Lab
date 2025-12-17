@@ -15,3 +15,7 @@ END {
     throughput = (received_bytes * 8) / (duration * 1000000)
     printf("\nThroughput = %.3f Mbps\n\n", throughput)
 }
+
+
+ns 10.tcl
+awk -f 10.awk 10.tr
