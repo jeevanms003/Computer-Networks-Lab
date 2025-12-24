@@ -90,7 +90,7 @@ proc finish {} {
     $ns flush-trace
     close $nt
     exec awk -f Lab5.awk Lab5.tr &
-    exec xgraph -P -x TIME -y DATA gsm.xg &
+    exec xgraph -P -x TIME -y DATA -tkFont fixed gsm.xg &
     exit 0
 }
 
