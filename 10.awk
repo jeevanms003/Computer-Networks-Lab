@@ -6,14 +6,16 @@ BEGIN {
 
 {
     if ($1 == "r" && $4 == "AGT" && $7 == "tcp") {
-        received_bytes += $8
+        received_bytes += $6
     }
 }
 
 END {
     duration = end_time - start_time
     throughput = (received_bytes * 8) / (duration * 1000000)
+
     printf("\n---------------------------------\n")
-    printf("Throughput = %.3f Mbps\n", throughput)
+    printf("Total Received Bytes = %d\n", received_bytes)
+    printf("Throughput = %.4f Mbps\n", throughput)
     printf("---------------------------------\n\n")
 }
