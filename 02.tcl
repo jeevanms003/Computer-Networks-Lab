@@ -4,16 +4,22 @@
 set ns [new Simulator]
 
 # ================================
-# Create NAM trace file
+# Set colors for flows
+# ================================
+$ns color 1 blue
+$ns color 2 red
+
+# ================================
+# NAM trace file
 # ================================
 set nam [open out.nam w]
 $ns namtrace-all $nam
 
 # ================================
-# Create trace file
+# Text trace file
 # ================================
 set tr [open out.tr w]
-$ns trace-all $tr 
+$ns trace-all $tr
 
 # ================================
 # Create 6 nodes
@@ -26,62 +32,79 @@ set n4 [$ns node]
 set n5 [$ns node]
 
 # ================================
-# Create duplex links between nodes
+# Create duplex links (increasing bandwidth)
 # ================================
-$ns duplex-link $n0 $n1 10Mb 10ms DropTail
-$ns duplex-link $n1 $n2 10Mb 10ms DropTail
-
-# Congested link (low bandwidth)
-$ns duplex-link $n2 $n3 1Mb 20ms DropTail
-
-$ns duplex-link $n3 $n4 10Mb 10ms DropTail
-$ns duplex-link $n4 $n5 10Mb 10ms DropTail
+$ns duplex-link $n0 $n1 0.1Mb 10ms DropTail
+$ns duplex-link $n1 $n2 0.2Mb 10ms DropTail
+$ns duplex-link $n2 $n3 0.3Mb 10ms DropTail
+$ns duplex-link $n3 $n4 0.4Mb 10ms DropTail
+$ns duplex-link $n4 $n5 0.5Mb 10ms DropTail
 
 # ================================
-# Set queue size on links
+# Set queue limits
 # ================================
-$ns queue-limit $n2 $n3 3
+$ns queue-limit $n0 $n1 10
+$ns queue-limit $n1 $n2 10
+$ns queue-limit $n2 $n3 10
+$ns queue-limit $n3 $n4 10
+$ns queue-limit $n4 $n5 10
 
 # ================================
-# Node orientation for NAM
+# Print ping reply message
 # ================================
-$ns duplex-link-op $n0 $n1 orient right
-$ns duplex-link-op $n1 $n2 orient right
-$ns duplex-link-op $n2 $n3 orient right
-$ns duplex-link-op $n3 $n4 orient right
-$ns duplex-link-op $n4 $n5 orient right
-
-# ================================
-# Create Ping agents
-# ================================
-set ping0 [new Agent/Ping]
-set ping1 [new Agent/Ping]
-
-# Attach Ping agents to nodes
-$ns attach-agent $n0 $ping0
-$ns attach-agent $n5 $ping1
-
-# Connect Ping agents
-$ns connect $ping0 $ping1
-
-# ================================
-# Schedule Ping packets
-# ================================
-for {set i 0} {$i < 25} {incr i} {
-    $ns at [expr 0.2 + $i*0.05] "$ping0 send"
+Agent/Ping instproc recv {from rtt} {
+    $self instvar node_
+    puts "Node [$node_ id] received ping reply from $from RTT = $rtt ms"
 }
+
+# ================================
+# Create ping agents
+# ================================
+set p0 [new Agent/Ping]
+$p0 set class_ 1
+$ns attach-agent $n0 $p0
+
+set p1 [new Agent/Ping]
+$p1 set class_ 1
+$ns attach-agent $n5 $p1
+
+# Connect ping agents
+$ns connect $p0 $p1
+
+# ================================
+# Create TCP agent and sink
+# ================================
+set tcp [new Agent/TCP]
+$tcp set class_ 2
+$tcp set fid_ 2
+
+set sink [new Agent/TCPSink]
+
+# Attach TCP and sink
+$ns attach-agent $n0 $tcp
+$ns attach-agent $n5 $sink
+
+# Connect TCP to sink
+$ns connect $tcp $sink
+
+# ================================
+# Create CBR traffic over TCP
+# ================================
+set cbr [new Application/Traffic/CBR]
+$cbr set packetSize_ 500
+$cbr set interval_ 0.005
+$cbr attach-agent $tcp
 
 # ================================
 # Finish procedure
 # ================================
 proc finish {} {
-    global ns nam tr 
+    global ns tr nam
 
     $ns flush-trace
     close $tr
     close $nam
 
-    # Open NAM and print number of dropped packets
     exec nam out.nam &
     exec echo "The number of packets dropped are:" &
     exec grep -c "^d" out.tr &
@@ -89,11 +112,27 @@ proc finish {} {
 }
 
 # ================================
-# Schedule finish
+# Schedule ping messages and CBR traffic
 # ================================
-$ns at 3.0 "finish"
+$ns at 0.2 "$p0 send"
+$ns at 0.4 "$p0 send"
+
+$ns at 0.6 "$cbr start"
+
+$ns at 0.8 "$p0 send"
+$ns at 1.0 "$p0 send"
+
+$ns at 1.2 "$cbr stop"
+
+$ns at 1.4 "$p0 send"
+$ns at 1.6 "$p0 send"
 
 # ================================
-# Run simulation
+# End simulation
+# ================================
+$ns at 1.8 "finish"
+
+# ================================
+# Run the simulation
 # ================================
 $ns run
