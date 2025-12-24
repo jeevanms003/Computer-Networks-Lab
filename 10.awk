@@ -26,3 +26,8 @@ END {
     printf("Throughput = %.4f Mbps\n", throughput)
     printf("---------------------------------\n\n")
 }
+
+
+
+
+awk -f Lab4.awk Lab4.tr
