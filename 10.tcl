@@ -1,6 +1,7 @@
 # ================================
 # Lab 4 – Wireless Adhoc Network
-# DSDV + TCP + CBR
+# DSDV Routing + TCP + FTP
+# Throughput Analysis using AWK
 # ================================
 
 # Create Simulator
@@ -33,7 +34,7 @@ $ns node-config \
     -routerTrace ON \
     -macTrace ON
 
-# GOD
+# Create GOD
 create-god 4
 
 # Create Nodes
@@ -67,16 +68,12 @@ set sink2 [new Agent/TCPSink]
 $ns attach-agent $n3 $sink2
 $ns connect $tcp2 $sink2
 
-# CBR Traffic
-set cbr1 [new Application/Traffic/CBR]
-$cbr1 set packetSize_ 512
-$cbr1 set interval_ 0.05
-$cbr1 attach-agent $tcp1
+# FTP Applications (CORRECT for TCP)
+set ftp1 [new Application/FTP]
+$ftp1 attach-agent $tcp1
 
-set cbr2 [new Application/Traffic/CBR]
-$cbr2 set packetSize_ 512
-$cbr2 set interval_ 0.05
-$cbr2 attach-agent $tcp2
+set ftp2 [new Application/FTP]
+$ftp2 attach-agent $tcp2
 
 # Finish Procedure
 proc finish {} {
@@ -85,17 +82,17 @@ proc finish {} {
     close $nt
     close $na
 
-    puts "Running AWK throughput analysis..."
+    puts "\nRunning AWK throughput analysis..."
     exec awk -f Lab4.awk Lab4.tr
 
     exec nam Lab4.nam &
     exit 0
 }
 
-# Start / Stop
-$ns at 1.0 "$cbr1 start"
-$ns at 1.0 "$cbr2 start"
+# Start & Stop
+$ns at 1.0 "$ftp1 start"
+$ns at 1.0 "$ftp2 start"
 $ns at 10.0 "finish"
 
-# Run
+# Run Simulation
 $ns run
