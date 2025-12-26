@@ -5,6 +5,7 @@ BEGIN {
 }
 
 {
+    # Wireless trace: received packets at AGT layer
     if ($1 == "r" && $4 == "AGT") {
         received_bytes += $6
     }
@@ -25,6 +26,11 @@ END {
     printf("Throughput = %.4f Mbps\n", throughput)
     printf("---------------------------------\n\n")
 }
+
+
+
+
+awk -f Lab4.awk Lab4.tr
 
 
 
