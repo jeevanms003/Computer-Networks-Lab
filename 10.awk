@@ -5,7 +5,6 @@ BEGIN {
 }
 
 {
-    # Wireless trace: received packets at AGT layer
     if ($1 == "r" && $4 == "AGT") {
         received_bytes += $6
     }
