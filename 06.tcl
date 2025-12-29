@@ -1,8 +1,10 @@
 # ---------- BUS TOPOLOGY (NS2) ----------
 
+# Create Simulator
 set ns [new Simulator]
 
-set tr  [open out.tr w]
+# Trace files
+set tr [open out.tr w]
 $ns trace-all $tr
 
 set nam [open out.nam w]
@@ -15,11 +17,11 @@ set n2 [$ns node]
 set n3 [$ns node]
 set n4 [$ns node]
 
-# Bus topology links (linear chain)
-$ns duplex-link $n0 $n1 10Mb 10ms DropTail
-$ns duplex-link $n1 $n2 10Mb 10ms DropTail
-$ns duplex-link $n2 $n3 10Mb 10ms DropTail
-$ns duplex-link $n3 $n4 10Mb 10ms DropTail
+# Create a shared bus (LAN)
+# All nodes connect to the SAME medium
+set lan_nodes "$n0 $n1 $n2 $n3 $n4"
+
+$ns newLan $lan_nodes 10Mb 10ms LL Queue/DropTail Mac/802_3 Channel
 
 # TCP Sender & Sink
 set tcp  [new Agent/TCP]
@@ -33,9 +35,11 @@ $ns connect $tcp $sink
 
 # CBR Application over TCP
 set cbr [new Application/Traffic/CBR]
+$cbr set packetSize_ 512
+$cbr set rate_ 1Mb
 $cbr attach-agent $tcp
 
-# Finish Procedure
+# Finish procedure
 proc finish {} {
     global ns tr nam
     $ns flush-trace
@@ -45,9 +49,10 @@ proc finish {} {
     exit 0
 }
 
-# Start / Stop Traffic
+# Start / Stop traffic
 $ns at 0.1 "$cbr start"
 $ns at 3.0 "$cbr stop"
 $ns at 3.5 "finish"
 
+# Run simulation
 $ns run
