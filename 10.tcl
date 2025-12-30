@@ -83,9 +83,9 @@ proc finish {} {
     close $na
 
     puts "\nRunning AWK throughput analysis..."
-    exec awk -f 10.awk out.tr
+    exec awk -f 10.awk out.tr &
 
-    exec nam Lab4.nam &
+    exec nam out.nam &
     exit 0
 }
 
