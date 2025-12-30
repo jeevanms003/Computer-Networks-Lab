@@ -8,10 +8,10 @@
 set ns [new Simulator]
 
 # Trace files
-set nt [open Lab4.tr w]
+set nt [open out.tr w]
 $ns trace-all $nt
 
-set na [open Lab4.nam w]
+set na [open out.nam w]
 $ns namtrace-all-wireless $na 500 500
 
 # Topography
@@ -83,7 +83,7 @@ proc finish {} {
     close $na
 
     puts "\nRunning AWK throughput analysis..."
-    exec awk -f Lab4.awk Lab4.tr
+    exec awk -f 10.awk out.tr
 
     exec nam Lab4.nam &
     exit 0
