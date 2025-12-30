@@ -1,88 +1,110 @@
-# ================================
-# TOKEN RING SIMULATION (RING TOPOLOGY)
-# ================================
+# =====================================
+# TOKEN RING SIMULATION – RING TOPOLOGY
+# =====================================
 
-# Create simulator
+# Create Simulator
 set ns [new Simulator]
 
 # Set colors
 $ns color 1 blue
+$ns color 2 red
+$ns color 3 green
 
 # Trace files
-set tr [open out.tr w]
+set tr [open tokenring.tr w]
 $ns trace-all $tr
 
-set nam [open out.nam w]
+set nam [open tokenring.nam w]
 $ns namtrace-all $nam
 
-# ================================
+# =====================================
 # Create Nodes
-# ================================
+# =====================================
 set n0 [$ns node]
 set n1 [$ns node]
 set n2 [$ns node]
 set n3 [$ns node]
 set n4 [$ns node]
 
-# ================================
-# Ring Topology Links
-# ================================
+# =====================================
+# Ring Topology
+# =====================================
 $ns duplex-link $n0 $n1 10Mb 10ms DropTail
 $ns duplex-link $n1 $n2 10Mb 10ms DropTail
 $ns duplex-link $n2 $n3 10Mb 10ms DropTail
 $ns duplex-link $n3 $n4 10Mb 10ms DropTail
 $ns duplex-link $n4 $n0 10Mb 10ms DropTail
 
-# ================================
-# TCP + CBR (Token Holder)
-# ================================
-set tcp [new Agent/TCP]
-set sink [new Agent/TCPSink]
+# =====================================
+# TCP + CBR for each node
+# =====================================
 
-$tcp set fid_ 1
+# Node 0
+set tcp0 [new Agent/TCP]
+set sink0 [new Agent/TCPSink]
+$tcp0 set fid_ 1
+$ns attach-agent $n0 $tcp0
+$ns attach-agent $n2 $sink0
+$ns connect $tcp0 $sink0
 
-$ns attach-agent $n0 $tcp
-$ns attach-agent $n3 $sink
-$ns connect $tcp $sink
+set cbr0 [new Application/Traffic/CBR]
+$cbr0 set packetSize_ 512
+$cbr0 set rate_ 1Mb
+$cbr0 attach-agent $tcp0
 
-# CBR Application
-set cbr [new Application/Traffic/CBR]
-$cbr set packetSize_ 512
-$cbr set rate_ 1Mb
-$cbr attach-agent $tcp
+# Node 1
+set tcp1 [new Agent/TCP]
+set sink1 [new Agent/TCPSink]
+$tcp1 set fid_ 2
+$ns attach-agent $n1 $tcp1
+$ns attach-agent $n3 $sink1
+$ns connect $tcp1 $sink1
 
-# ================================
-# TOKEN CONTROL PROCEDURE
-# ================================
-proc token_start {app} {
-    $app start
-}
+set cbr1 [new Application/Traffic/CBR]
+$cbr1 set packetSize_ 512
+$cbr1 set rate_ 1Mb
+$cbr1 attach-agent $tcp1
 
-proc token_stop {app} {
-    $app stop
-}
+# Node 2
+set tcp2 [new Agent/TCP]
+set sink2 [new Agent/TCPSink]
+$tcp2 set fid_ 3
+$ns attach-agent $n2 $tcp2
+$ns attach-agent $n4 $sink2
+$ns connect $tcp2 $sink2
 
-# ================================
+set cbr2 [new Application/Traffic/CBR]
+$cbr2 set packetSize_ 512
+$cbr2 set rate_ 1Mb
+$cbr2 attach-agent $tcp2
+
+# =====================================
+# TOKEN PASSING (Controlled Access)
+# =====================================
+# Each node gets token for fixed time
+
+$ns at 0.1  "$cbr0 start"
+$ns at 0.6  "$cbr0 stop"
+
+$ns at 0.7  "$cbr1 start"
+$ns at 1.2  "$cbr1 stop"
+
+$ns at 1.3  "$cbr2 start"
+$ns at 1.8  "$cbr2 stop"
+
+# =====================================
 # Finish Procedure
-# ================================
+# =====================================
 proc finish {} {
-    global ns nam tr
+    global ns tr nam
     $ns flush-trace
     close $tr
     close $nam
-    exec nam out.nam &
+    exec nam tokenring.nam &
     exit 0
 }
 
-# ================================
-# Token Passing Schedule
-# ================================
-# Token with n0 from 0.1 to 1.0 sec
-$ns at 0.1 "token_start $cbr"
-$ns at 1.0 "token_stop $cbr"
+$ns at 2.0 "finish"
 
-# End simulation
-$ns at 1.5 "finish"
-
-# Run
+# Run Simulation
 $ns run
