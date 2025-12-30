@@ -1,23 +1,22 @@
-# Create simulator object
+# Create a new simulator object
 set ns [new Simulator]
 
-# Create a trace file for NAM
+# Create trace files for NAM and packet-level tracing
 set nam [open out.nam w]
 $ns namtrace-all $nam
 
-# Create a trace file for packet-level tracing
 set tr [open out.tr w]
 $ns trace-all $tr
 
-# Create two nodes: one sender (n0) and one receiver (n1)
+# Create two nodes: sender (n0) and receiver (n1)
 set n0 [$ns node]
 set n1 [$ns node]
 
-# Create duplex link between nodes
+# Create duplex link between nodes with bandwidth 1Mb and delay 10ms
 $ns duplex-link $n0 $n1 1Mb 10ms DropTail
 $ns queue-limit $n0 $n1 50
 
-# Create TCP agent for sender and receiver
+# Create TCP agents for sender and receiver
 set tcp0 [new Agent/TCP]
 set sink [new Agent/TCPSink]
 
@@ -25,38 +24,43 @@ set sink [new Agent/TCPSink]
 $ns attach-agent $n0 $tcp0
 $ns attach-agent $n1 $sink
 
-# Connect TCP sender to the sink (receiver)
+# Connect the TCP sender to the TCP sink (receiver)
 $ns connect $tcp0 $sink
 
-# Create a simple application to generate data (CBR) for Stop-and-Wait
+# Create a sliding window CBR application
 set cbr [new Application/Traffic/CBR]
 $cbr attach-agent $tcp0
 
 # Set packet size and interval for the CBR (data packets)
-$cbr set packetSize_ 512       ;# Each packet will be 512 bytes
-$cbr set interval_ 0.5         ;# Interval of 500ms between packets
+$cbr set packetSize_ 512      ;# Each packet will be 512 bytes
+$cbr set interval_ 0.5        ;# Interval of 500ms between packets
 
-# Define stop-and-wait behavior
-proc stop_and_wait {} {
-    global ns cbr
+# Define the Sliding Window protocol behavior
+set window_size 4  ;# Set the window size (e.g., 4 packets in the window)
+
+# Define a procedure to handle the sliding window behavior
+proc sliding_window {} {
+    global ns cbr window_size tcp0
 
     # Get the current simulation time
     set curr_time [$ns now]
+    
+    # Send packets within the window size
+    for {set i 0} {$i < $window_size} {incr i} {
+        # Start sending the next packet within the window
+        $cbr start
+        # Set the time for stopping the current packet (e.g., 1 second per packet)
+        $ns at [expr $curr_time + 1.0] "$cbr stop"
+    }
 
-    # Start the CBR traffic (this sends the first packet)
-    $cbr start
-
-    # Schedule the stop for the current packet
-    $ns at [expr $curr_time + 1.0] "$cbr stop"   ;# Stop after 1 second
-
-    # Schedule the next packet to be sent after 1.5 seconds
-    $ns at [expr $curr_time + 1.5] "stop_and_wait"
+    # Slide the window after sending the packets
+    $ns at [expr $curr_time + 1.5] "sliding_window"
 }
 
-# Schedule the first packet to be sent at 0.1s and start Stop-and-Wait
-$ns at 0.1 "stop_and_wait"
+# Start the sliding window process after 0.1 seconds
+$ns at 0.1 "sliding_window"
 
-# Finish procedure to close files and run the simulation
+# Finish procedure to close trace files and run simulation
 proc finish {} {
     global ns nam tr
     $ns flush-trace
@@ -67,6 +71,6 @@ proc finish {} {
     exit 0
 }
 
-# Run the simulation for 5 seconds
-$ns at 5.0 "finish"
+# Run the simulation for 10 seconds
+$ns at 10.0 "finish"
 $ns run
